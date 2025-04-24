@@ -10,28 +10,24 @@ module "db" {
   db_name  = "transactions" # this is expense database. AWS will automatically create this schema when creating rds
   username = "root"
   password = "ExpenseApp1"
+  manage_master_user_password = false # We don't want AWS RDS to manage pwd as we have our own password
   port     = "3306"
 
   vpc_security_group_ids = [local.mysql_sg_id]
 
-  tags = merge(
-    var.common_tags,
-    {
-        Name = "${var.projectname}-${var.environment}-rds"
-    }
-  )
   # DB subnet group
   create_db_subnet_group = false # false because we already created db_subnet_group
-  db_subnet_group_name  = d
+  db_subnet_group_name  = local.db_subnet_group_name
 
   # DB parameter group
-  family = "mysql5.7"
+  family = "mysql8.0"
 
   # DB option group
-  major_engine_version = "5.7"
+  major_engine_version = "8.0"
 
   # Database Deletion Protection
-  deletion_protection = true
+  deletion_protection = false # keeping it false else we can not delete it from TF. 
+                              #usually in projects this will be true so that no one is allowed to delete from console
 
   parameters = [
     {
@@ -60,5 +56,23 @@ module "db" {
       ]
     },
   ]
+
+  tags = merge(
+    var.common_tags,
+    {
+        Name = local.resource_name
+    }
+  )
+}
+
+
+# ------------ Route 53 record for RDS mysql --------------------
+
+resource "aws_route53_record" "mysql-dev" {
+  zone_id = var.zone_id
+  name    = "${local.resource_name}.${var.domain_name}" #expense-dev.domain_name
+  type    = "CNAME"
+  ttl     = 1
+  records = [module.db.db_instance_address]
 }
 

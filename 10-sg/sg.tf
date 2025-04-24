@@ -142,6 +142,8 @@ resource "aws_security_group_rule" "app_alb_vpn" {
   security_group_id = module.app_alb_sg.sg_id # To which sg we are setting this rule? Its for app_alb
 }
 
+//--------------- mysql ----------------------------
+
 // --- security group rule for mysql accepting connections from bastion host -----
 resource "aws_security_group_rule" "mysql_bastion" {
   type              = "ingress"
@@ -149,5 +151,15 @@ resource "aws_security_group_rule" "mysql_bastion" {
   to_port           = 3306
   protocol          = "tcp"
   source_security_group_id =  module.bastion_sg.sg_id
+  security_group_id = module.mysql_sg.sg_id # To which sg we are setting this rule? Its for app_alb
+}
+
+// --- security group rule for mysql accepting connections from vpn -----
+resource "aws_security_group_rule" "mysql_vpn" {
+  type              = "ingress"
+  from_port         = 3306 # AWS will not give the port 22 (ssh) for us as they handle the RDS
+  to_port           = 3306
+  protocol          = "tcp"
+  source_security_group_id =  module.vpn_sg.sg_id
   security_group_id = module.mysql_sg.sg_id # To which sg we are setting this rule? Its for app_alb
 }

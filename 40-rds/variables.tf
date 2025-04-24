@@ -22,4 +22,14 @@ variable "common_tags" {
       }
 }
 
+# ---------- Route 53 ----------------
+variable "zone_id" {
+    type = string  
+    default = "Z09859442XBHBSN9FNQ5B"
+}
+
+variable "domain_name" {
+  default = "vishnudevopsaws.online"  
+}
+
 
