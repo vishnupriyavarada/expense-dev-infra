@@ -70,7 +70,7 @@ module "db" {
 
 resource "aws_route53_record" "mysql-dev" {
   zone_id = var.zone_id
-  name    = "${local.resource_name}.${var.domain_name}" #expense-dev.domain_name
+  name    = "mysql-${var.environment}.${var.domain_name}" #expense-dev.domain_name
   type    = "CNAME"
   ttl     = 1
   records = [module.db.db_instance_address]
