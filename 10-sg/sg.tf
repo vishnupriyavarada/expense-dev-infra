@@ -154,6 +154,16 @@ resource "aws_security_group_rule" "mysql_bastion" {
   security_group_id = module.mysql_sg.sg_id # To which sg we are setting this rule? Its for app_alb
 }
 
+# mysql accepting traffic from backend on port number 3306
+resource "aws_security_group_rule" "mysql_backend" {
+  type              = "ingress"
+  from_port         = 3306 
+  to_port           = 3306
+  protocol          = "tcp"
+  source_security_group_id =  module.backend_sg.sg_id
+  security_group_id = module.mysql_sg.sg_id # To which sg we are setting this rule? Its for app_alb
+}
+
 // --- security group rule for mysql accepting connections from vpn -----
 resource "aws_security_group_rule" "mysql_vpn" {
   type              = "ingress"
