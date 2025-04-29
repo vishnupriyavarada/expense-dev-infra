@@ -40,3 +40,26 @@ resource "null_resource" "backend" {
     ]
   }
 }
+
+# ----- Stop the ec2 instance ---------
+resource "aws_ec2_instance_state" "backend" {
+  instance_id = aws_instance.backend.id
+  state       = "stopped"
+  depends_on = [ null_resource.backend ] # Stop ec2 instance only when null_resource provisioner tasks are completed
+}
+
+# ------ Take the ami of the backend server ----
+resource "aws_ami_from_instance" "backend" {
+  name               = local.resource_name
+  source_instance_id = aws_instance.backend.id
+  depends_on = [ aws_ec2_instance_state.backend ] # take ami of the backend server only when ec2 instance is stopped
+}
+
+# ------ Terminate Ec2 instance when the ami of the backend server ----
+resource "null_resource" "backend" {
+  provisioner "local-exec" {
+    command =     aws_ami_from_instance
+  }
+  depends_on = [ aws_ami_from_instance.backend ] # take ami of the backend server only when ec2 instance is stopped
+}
+

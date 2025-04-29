@@ -72,7 +72,7 @@ module "app_alb_sg" {
 // -------------- Security group Rules for ALB ----------------------
 
 # APP ALB accepting the traffic from bastion
-resource "aws_security_group_rule" "example" {
+resource "aws_security_group_rule" "alb_bastion" {
   type              = "ingress"
   from_port         = 80
   to_port           = 80
@@ -174,6 +174,7 @@ resource "aws_security_group_rule" "mysql_vpn" {
   security_group_id = module.mysql_sg.sg_id # To which sg we are setting this rule? Its for app_alb
 }
 
+//------------------ backend --------------------------------------------
 // --- security group rule for backend accepting connections from vpn -----
 resource "aws_security_group_rule" "backend_vpn" {
   type              = "ingress"
@@ -181,5 +182,23 @@ resource "aws_security_group_rule" "backend_vpn" {
   to_port           = 22
   protocol          = "tcp"
   source_security_group_id =  module.vpn_sg.sg_id
+  security_group_id = module.backend_sg.sg_id # To which sg we are setting this rule? Its for app_alb
+}
+
+resource "aws_security_group_rule" "backend_vpn_http" {
+  type              = "ingress"
+  from_port         = 8080 # Developers to access through API
+  to_port           = 8080
+  protocol          = "tcp"
+  source_security_group_id =  module.vpn_sg.sg_id
+  security_group_id = module.backend_sg.sg_id # To which sg we are setting this rule? Its for app_alb
+}
+# --- backend should allow connection from app_alb on port 8080 -----------
+resource "aws_security_group_rule" "backend_app_alb" {
+  type              = "ingress"
+  from_port         = 8080 # Developers to access through API
+  to_port           = 8080
+  protocol          = "tcp"
+  source_security_group_id =  module.app_alb_sg.sg_id
   security_group_id = module.backend_sg.sg_id # To which sg we are setting this rule? Its for app_alb
 }
