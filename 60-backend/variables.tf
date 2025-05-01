@@ -21,3 +21,8 @@ variable "common_tags" {
     Terraform   = "True"
   }
 }
+
+variable "domain_name" {
+  type = string
+  default = "vishnudevopsaws.online"
+}
