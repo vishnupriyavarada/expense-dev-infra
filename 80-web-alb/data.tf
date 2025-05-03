@@ -9,3 +9,7 @@ data "aws_ssm_parameter" "public_subnet_ids" {
 data "aws_ssm_parameter" "web_alb_sg_id" {
   name = "/${var.projectname}/${var.environment}/web_alb_sg_id"
 }
+
+data "aws_ssm_parameter" "web_alb_certificate_arn" {
+  name = "/${var.projectname}/${var.environment}/web_alb_certificate_arn"
+}

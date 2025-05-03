@@ -40,7 +40,7 @@ resource "aws_lb_listener" "http" {
 
 //--------------- Route 53 record ------------------------
 
-resource "aws_route53_record" "www" {
+resource "aws_route53_record" "app_alb" {
   zone_id = var.zone_id
   name    = "*.app-dev.${var.domain_name}" 
   type    = "A"

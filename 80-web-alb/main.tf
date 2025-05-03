@@ -21,28 +21,30 @@ module "alb" {
 }
 
 
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = module.alb.arn
-  port              = "80"
-  protocol          = "HTTP"
-    #backend is not yet created hence giving fixed_responser for testing alb listener
+resource "aws_lb_listener" "https" {
+  load_balancer_arn =  module.alb.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = local.web_alb_certificate_arn
+
+  # frontend is not yet created hence giving fixed_responser for testing alb listener
   default_action {
     type = "fixed-response"
     fixed_response {
       content_type = "text/plain"
-      message_body = "<h1> Hello, I am from backend app ALB </h1>"
+      message_body = "<h1> Hello, I am from frontend web ALB with Https </h1>"
       status_code  = "200"
     }
   }
-  
 }
 
 
 //--------------- Route 53 record ------------------------
 
-resource "aws_route53_record" "www" {
+resource "aws_route53_record" "web_alb" {
   zone_id = var.zone_id
-  name    = "*.app-dev.${var.domain_name}" 
+  name    = "*.${var.domain_name}" 
   type    = "A"
   # These are ALB DNS name and zone information
   alias {
