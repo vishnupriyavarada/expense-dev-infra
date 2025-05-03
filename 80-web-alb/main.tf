@@ -2,20 +2,20 @@
 module "alb" {
   source = "terraform-aws-modules/alb/aws"
 
-  # expense-dev-app-alb
-  name     = "${var.projectname}-${var.environment}-app-alb"
-  internal = true #define the alb is internal or private or backend
+  # expense-dev-web-alb
+  name     = "${var.projectname}-${var.environment}-web-alb"
+  internal = false
   vpc_id   = data.aws_ssm_parameter.vpc_id.value
   # private subnets. creating backend ALB 
-  subnets = local.private_subnet_ids
+  subnets = local.public_subnet_ids
   # create your own security group hence it's false
   create_security_group      = false
-  security_groups            = [local.app_alb_sg_id]
+  security_groups            = [local.web_alb_sg_id]
   enable_deletion_protection = false # If set true, deletion of ALB will be disabled via the AWS API. This prevents TF from deleting ALB
   tags = merge(
     var.common_tags,
     {
-      Name = "${var.projectname}-${var.environment}-app-alb"
+      Name = "${var.projectname}-${var.environment}-web-alb"
     }
   )
 }

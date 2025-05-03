@@ -28,6 +28,9 @@ sg_bastion_description="security group created for bastion instance in expense p
 sg_app_alb_name="app-alb"  
 sg_app_alb_description="security group created for backend ALB in expense project"
 
+sg_web_alb_name="web-alb"  
+sg_web_alb_description="security group created for frontend ALB in expense project"
+
 sg_bastion_name="bastion"  
 sg_bastion_description="security group created for bastion instance in expense project"
 

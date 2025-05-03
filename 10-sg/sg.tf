@@ -69,6 +69,19 @@ module "app_alb_sg" {
   common_tags    = var.common_tags
 }
 
+//-------------- Frontend ALB SG ------------------
+
+module "web_alb_sg" {
+  #source = "../terraform-aws-securitygroup" // this method is used when your code is in local
+  source = "git::https://github.com/vishnupriyavarada/terraform-aws-securitygroup.git?ref=main" 
+  environment    = var.environment
+  sg_description = var.sg_web_alb_description
+  sg_name        = var.sg_app_alb_name
+  project_name   = var.projectname
+  vpc_id         = data.aws_ssm_parameter.vpc_id.value
+  common_tags    = var.common_tags
+}
+
 // -------------- Security group Rules for ALB ----------------------
 
 # APP ALB accepting the traffic from bastion
@@ -80,6 +93,18 @@ resource "aws_security_group_rule" "alb_bastion" {
   #cidr_blocks       = [aws_vpc.example.cidr_block] - CIDR is not required here as we are not giving any IP address
   source_security_group_id =  [module.bastion_sg.sg_id ] # accept the traffic from bastion host which is coming on port 80
   security_group_id = module.app_alb_sg.sg_id # To which sg we are setting this rule? Its for app_alb
+}
+
+// -------------- Security group Rules for Web ALB / Frontend ALB ----------------------
+
+# Web ALB accepting https traffic from internet
+resource "aws_security_group_rule" "web_alb_https" {
+  type              = "ingress"
+  from_port         = 443 # Traffic from internet. HTTPS
+  to_port           = 443
+  protocol          = "tcp"  
+  source_security_group_id =  [ "0.0.0.0/0" ] # from internet
+  security_group_id = module.web_alb_sg.sg_id # To which sg we are setting this rule? Its for web_alb
 }
 
 //--------------- security group rule for bastion host -----------------
