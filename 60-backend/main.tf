@@ -57,6 +57,11 @@ resource "aws_ami_from_instance" "backend" {
 
 # ------ Terminate Ec2 instance when the ami of the backend server is completed ----
 resource "null_resource" "backend_terminate_ec2" {
+  # trigger everytime when AMI is taken and instance changes
+  triggers = {
+    instance_id = aws_instance.backend.id
+  }
+
   provisioner "local-exec" {
     command =     aws_ami_from_instance
   }
