@@ -114,7 +114,7 @@ resource "aws_autoscaling_group" "backend" {
   name                      = local.resource_name
   max_size                  = 10
   min_size                  = 1
-  health_check_grace_period = 180 # with in 60 sec it has to do health check. making it to 180 as aws is taking time to initialize  the instance
+  health_check_grace_period = 60 # with in 60 sec it has to do health check
   health_check_type         = "ELB"
   desired_capacity          = 1
   target_group_arns = [aws_lb_listener_rule.backend.arn] # 2. which target group the instance should be placed
