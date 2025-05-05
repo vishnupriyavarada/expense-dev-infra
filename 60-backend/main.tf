@@ -63,7 +63,7 @@ resource "null_resource" "backend_terminate_ec2" {
   }
 
   provisioner "local-exec" {
-    command =     aws_ami_from_instance
+    command =  "aws ec2 terminate-instances --instance-ids ${aws_instance.backend}"
   }
   depends_on = [ aws_ami_from_instance.backend ] # terminate backend ec2 instance only when ami is taken
 }
@@ -159,7 +159,22 @@ resource "aws_autoscaling_group" "backend" {
  
 }
 
-# --------- 5. ALB listener rule ---------------
+# --------- 5. Auto scaling policy  ---------------
+resource "aws_autoscaling_policy" "expense" {
+  name                   = "${local.resource_name}-backend"
+  policy_type            = "TargetTrackingScaling" # this policy type tracks the targets and scales
+  cooldown               = 300
+  autoscaling_group_name = "${aws_autoscaling_group.backend.name}"
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+
+    target_value = 70.0
+  }
+}
+
+# --------- 6. ALB listener rule ---------------
 resource "aws_lb_listener_rule" "backend" {
   listener_arn = data.aws_ssm_parameter.app_alb_listener_arn.value
   priority     = 10

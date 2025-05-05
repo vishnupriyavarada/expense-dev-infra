@@ -1,78 +1,78 @@
-resource "aws_instance" "backend" {
+resource "aws_instance" "frontend" {
   ami                    = local.ami-id # Org's golden AMI - This will get continuosly updated
   instance_type          = var.instance_type
   subnet_id = local.private_subnet_ids[0]// getting first subnet id from the list
-  vpc_security_group_ids = [data.aws_ssm_parameter.backend_sg_id.value]
+  vpc_security_group_ids = [data.aws_ssm_parameter.frontend_sg_id.value]
   tags = merge(
     var.common_tags,
     {
-        Name = "${var.projectname}-${var.environment}-backend"
+        Name = "${var.projectname}-${var.environment}-frontend"
     }
   )
   
 }
 
-resource "null_resource" "backend" {
+resource "null_resource" "frontend" {
   # Changes to any instance of the cluster(group of instances) requires re-provisioning
   triggers = {
-    instance_id = aws_instance.backend.id
+    instance_id = aws_instance.frontend.id
   }
 
-  # Connecting to backend instance
+  # Connecting to frontend instance
   connection {
-    host = aws_instance.backend.private_ip
+    host = aws_instance.frontend.public_ip # we can give private_ip but we need to start vpn. hence giving public_ip
     type = "ssh"
     user =  "ec2-user1"
     password = "DevOps321"
   }
 
   provisioner "file" {
-    source      = "backend.sh"
-    destination = "/tmp/backend.sh"
+    source      = "frontend.sh"
+    destination = "/tmp/frontend.sh"
   }
 
   provisioner "remote-exec" {
     # Bootstrap script called with private_ip of each node in the cluster
     inline = [
-      "chmod +x /tmp/backend.sh", # changing the permissions of backend.sh
-      "sudo sh /tmp/backend.sh ${var.environment}" # executing the backend.sh in server with sudo access
+      "chmod +x /tmp/frontend.sh", # changing the permissions of frontend.sh
+      "sudo sh /tmp/frontend.sh ${var.environment}" # executing the frontend.sh in server with sudo access
 
     ]
   }
 }
 
 # ----- Stop the ec2 instance ---------
-resource "aws_ec2_instance_state" "backend" {
-  instance_id = aws_instance.backend.id
+resource "aws_ec2_instance_state" "frontend" {
+  instance_id = aws_instance.frontend.id
   state       = "stopped"
-  depends_on = [ null_resource.backend ] # Stop ec2 instance only when null_resource provisioner tasks are completed
+  depends_on = [ null_resource.frontend ] # Stop ec2 instance only when null_resource provisioner tasks are completed
 }
 
-# ------ 1 . AMI - Take the ami of the backend server ----
-resource "aws_ami_from_instance" "backend" {
+# ------ 1 . AMI - Take the ami of the frontend server ----
+resource "aws_ami_from_instance" "frontend" {
   name               = local.resource_name
-  source_instance_id = aws_instance.backend.id
-  depends_on = [ aws_ec2_instance_state.backend ] # take ami of the backend server only when ec2 instance is stopped
+  source_instance_id = aws_instance.frontend.id
+  depends_on = [ aws_ec2_instance_state.frontend ] # take ami of the frontend server only when ec2 instance is stopped
 }
 
-# ------ Terminate Ec2 instance when the ami of the backend server is completed ----
-resource "null_resource" "backend_terminate_ec2" {
+# ------ Terminate Ec2 instance when the ami of the frontend server is completed ----
+resource "null_resource" "frontend_terminate_ec2" {
   # trigger everytime when AMI is taken and instance changes
   triggers = {
-    instance_id = aws_instance.backend.id
+    instance_id = aws_instance.frontend.id
   }
 
   provisioner "local-exec" {
-    command =     aws_ami_from_instance
+    command = "aws ec2 terminate-instances --instance-ids ${aws_instance.frontend}"
   }
-  depends_on = [ aws_ami_from_instance.backend ] # terminate backend ec2 instance only when ami is taken
+  depends_on = [ aws_ami_from_instance.frontend ] # terminate frontend ec2 instance only when ami is taken
 }
 
 # -------- 2. Target Group - create TG -------------------
 
-resource "aws_lb_target_group" "backend" {
+resource "aws_lb_target_group" "frontend" {
   name     = local.resource_name
-  port     = 8080
+  port     = 80
   protocol = "HTTP"
   vpc_id   = local.vpc_id
 
@@ -82,7 +82,7 @@ resource "aws_lb_target_group" "backend" {
     timeout = 5 # wait time in between the request
     protocol = "HTTP"
     port = 8080
-    path = "/health"
+    path = "/"
     matcher = "200-299" # success code range
     interval = 10 # how often the health check has to be done
   }
@@ -90,13 +90,13 @@ resource "aws_lb_target_group" "backend" {
 
 # ---------- 3 . Launch template -------------------
 
-resource "aws_launch_template" "backend" {
+resource "aws_launch_template" "frontend" {
   name = local.resource_name
-  image_id = aws_ami_from_instance.backend.id
+  image_id = aws_ami_from_instance.frontend.id
   instance_initiated_shutdown_behavior = "terminate" # if ASG reduces the instance than it should terminate the instances
   instance_type = "t3.micro"
   update_default_version = true # every time you go for a new release, launch template picks that latest version for launching ec2
-  vpc_security_group_ids = [local.backend_sg_id]
+  vpc_security_group_ids = [local.frontend_sg_id]
 
   tag_specifications {
     resource_type = "instance"
@@ -110,21 +110,21 @@ resource "aws_launch_template" "backend" {
 
 # ---------- 4 . Create Auto scaling group -----------
 
-resource "aws_autoscaling_group" "backend" {
+resource "aws_autoscaling_group" "frontend" {
   name                      = local.resource_name
   max_size                  = 10
   min_size                  = 1
   health_check_grace_period = 60 # with in 60 sec it has to do health check
   health_check_type         = "ELB"
   desired_capacity          = 1
-  target_group_arns = [aws_lb_listener_rule.backend.arn] # 2. which target group the instance should be placed
+  target_group_arns = [aws_lb_listener_rule.frontend.arn] # 2. which target group the instance should be placed
 
   launch_template {
-    id      = aws_launch_template.backend.id # 1. we created launch template above
+    id      = aws_launch_template.frontend.id # 1. we created launch template above
     version = "$Latest"
   }
 
-  vpc_zone_identifier       = [local.private_subnet_ids]
+  vpc_zone_identifier       = [local.public_subnet_ids]
 
   # Rolling update - when old instance is deleted and new instance is created
   instance_refresh {
@@ -159,19 +159,35 @@ resource "aws_autoscaling_group" "backend" {
  
 }
 
-# --------- 5. ALB listener rule ---------------
-resource "aws_lb_listener_rule" "backend" {
-  listener_arn = data.aws_ssm_parameter.app_alb_listener_arn.value
+# --------- 5. Auto scaling policy  ---------------
+resource "aws_autoscaling_policy" "expense" {
+  name                   = "${local.resource_name}-frontend"
+  policy_type            = "TargetTrackingScaling" # this policy type tracks the targets and scales
+  cooldown               = 300
+  autoscaling_group_name = "${aws_autoscaling_group.frontend.name}"
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+
+    target_value = 70.0
+  }
+}
+
+# --------- 6. ALB listener rule ---------------
+resource "aws_lb_listener_rule" "frontend" {
+  listener_arn = data.aws_ssm_parameter.web_alb_listener_arn.value
   priority     = 10
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
+    target_group_arn = aws_lb_target_group.frontend.arn
   }
 
   condition {
     host_header {
-      values = ["backend.app-${var.environment}.${var.domain_name}"]
+      values = ["expense-${var.environment}.${var.domain_name}"] # dev - expense-dev.daws82s.online ;qa - expense-devqa.daws82s.online 
+      # prod - daws82s.online
     }
   }
 }
