@@ -248,3 +248,17 @@ resource "aws_security_group_rule" "backend_app_alb" {
   source_security_group_id =  module.app_alb_sg.sg_id
   security_group_id = module.backend_sg.sg_id # To which sg we are setting this rule? Its for app_alb
 }
+
+
+// ------------------------ frontend ---------------------------------
+// --- security group rule for frontend accepting traffic from public -----
+
+# usually you should configure frontend using private ip from VPN only
+resource "aws_security_group_rule" "frontend_public" {
+  type              = "ingress"
+  from_port         = 22 # SSH port
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+  security_group_id = module.frontend_sg.sg_id # To which sg we are setting this rule? Its for app_alb
+}
