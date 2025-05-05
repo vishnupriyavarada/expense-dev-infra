@@ -82,7 +82,7 @@ module "web_alb_sg" {
   common_tags    = var.common_tags
 }
 
-// -------------- Security group Rules for ALB ----------------------
+// -------------- Security group Rules for App ALB ----------------------
 
 # APP ALB accepting the traffic from bastion
 resource "aws_security_group_rule" "alb_bastion" {
@@ -95,6 +95,17 @@ resource "aws_security_group_rule" "alb_bastion" {
   security_group_id = module.app_alb_sg.sg_id # To which sg we are setting this rule? Its for app_alb
 }
 
+# APP ALB accepting the traffic from frontend
+resource "aws_security_group_rule" "app_alb_frontend" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  source_security_group_id =  module.frontend_sg.sg_id # accept the traffic from frontend on port 80
+  security_group_id = module.app_alb_sg.sg_id # To which sg we are setting this rule? Its for app_alb
+}
+
+
 // -------------- Security group Rules for Web ALB / Frontend ALB ----------------------
 
 # Web ALB accepting https traffic from internet
@@ -105,6 +116,16 @@ resource "aws_security_group_rule" "web_alb_https" {
   protocol          = "tcp"  
   source_security_group_id =  [ "0.0.0.0/0" ] # from internet
   security_group_id = module.web_alb_sg.sg_id # To which sg we are setting this rule? Its for web_alb
+}
+
+# frontend accepting traffic from web_alb
+resource "aws_security_group_rule" "frontend_web_alb" {
+  type              = "ingress"
+  from_port         = 80 # Traffic is from Web_alb to frontend hence port is 80
+  to_port           = 80
+  protocol          = "tcp"  
+  source_security_group_id =  module.web_alb_sg.sg_id # from web_alb
+  security_group_id = module.frontend_sg.sg_id # To which sg we are setting this rule? Its for frontend servers
 }
 
 //--------------- security group rule for bastion host -----------------
