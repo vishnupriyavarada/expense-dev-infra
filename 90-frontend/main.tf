@@ -81,7 +81,7 @@ resource "aws_lb_target_group" "frontend" {
     unhealthy_threshold = 2
     timeout = 5 # wait time in between the request
     protocol = "HTTP"
-    port = 8080
+    port = 80
     path = "/"
     matcher = "200-299" # success code range
     interval = 10 # how often the health check has to be done
