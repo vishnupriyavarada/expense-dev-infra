@@ -75,6 +75,7 @@ resource "aws_lb_target_group" "frontend" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = local.vpc_id
+    deregistration_delay = 60 # 1 min - Amount of time for ALB to wait before changing the state of a deregistering target from draining to unused
 
   health_check {
     healthy_threshold = 2
@@ -136,7 +137,7 @@ resource "aws_autoscaling_group" "frontend" {
   }
 
   timeouts {
-    delete = "5m" # with in 5minutes of time if the instance is not up then it will delete the instance
+    delete = "10m" # with in 5minutes of time if the instance is not up then it will delete the instance
   }
 
   tag {
