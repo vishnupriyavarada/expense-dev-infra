@@ -2,6 +2,12 @@ resource "aws_cloudfront_distribution" "expense" {
   origin {
     domain_name              = "${var.projectname}-${var.environment}.${var.domain_name}" # expense-dev.daws82s.online
     origin_id                = "${var.projectname}-${var.environment}.${var.domain_name}"
+    custom_origin_config {
+        http_port =  80
+        https_port = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols = ["TLSv1.2"]
+    }
   }
   enabled             = true
   is_ipv6_enabled     = true
